@@ -346,44 +346,76 @@ class Command(BaseCommand):
                 }
             )
 
-        # 9. Create Bills & Insurance Claims
-        bill1, _ = Bill.objects.get_or_create(
-            patient=patients_objs['patient.charlie'],
-            appointment=app3,
-            defaults={
-                'consultation_fee': 90.00,
-                'test_charges': 40.00,
-                'bed_charges': 0.00,
-                'medicine_charges': 35.00,
-                'total_amount': 165.00,
-                'payment_status': Bill.PaymentStatus.PAID
-            }
-        )
-
-        bill2, _ = Bill.objects.get_or_create(
-            patient=patients_objs['patient.alice'],
-            appointment=app1,
-            defaults={
-                'consultation_fee': 120.00,
-                'test_charges': 200.00,
-                'bed_charges': 150.00,
-                'medicine_charges': 80.00,
-                'total_amount': 550.00,
-                'payment_status': Bill.PaymentStatus.UNPAID
-            }
-        )
-
-        claim_code = f'CLM-{today.strftime("%Y%m%d")}-01'
-        if not InsuranceClaim.objects.filter(claim_id=claim_code).exists() and not InsuranceClaim.objects.filter(bill=bill2).exists():
-            InsuranceClaim.objects.create(
-                bill=bill2,
-                patient=patients_objs['patient.alice'],
-                claim_id=claim_code,
-                insurance_provider='SecureLife Insurance Company',
-                policy_number='POL-994101',
-                claim_amount=25550.00,
-                status=InsuranceClaim.ClaimStatus.PENDING,
-                notes='Cardiac ICU evaluation claim.'
+        # 9. Create Bills & Insurance Claims (Realistic Fake Medical Bills Data)
+        if Bill.objects.count() < 4:
+            bill1 = Bill.objects.create(
+                patient=patients_objs['patient.charlie'],
+                appointment=app3,
+                consultation_fee=400.00,
+                test_charges=600.00,
+                bed_charges=0.00,
+                medicine_charges=850.00,
+                total_amount=1850.00,
+                payment_status=Bill.PaymentStatus.PAID
             )
+
+            bill2 = Bill.objects.create(
+                patient=patients_objs['patient.alice'],
+                appointment=app1,
+                consultation_fee=500.00,
+                test_charges=3500.00,
+                bed_charges=8000.00,
+                medicine_charges=2500.00,
+                total_amount=14500.00,
+                payment_status=Bill.PaymentStatus.UNPAID
+            )
+
+            bill3 = Bill.objects.create(
+                patient=patients_objs['patient.bob'],
+                appointment=app2,
+                consultation_fee=600.00,
+                test_charges=2500.00,
+                bed_charges=0.00,
+                medicine_charges=1100.00,
+                total_amount=4200.00,
+                payment_status=Bill.PaymentStatus.UNPAID
+            )
+
+            bill4 = Bill.objects.create(
+                patient=patients_objs['patient.alice'],
+                consultation_fee=500.00,
+                test_charges=1250.00,
+                bed_charges=0.00,
+                medicine_charges=1000.00,
+                total_amount=2750.00,
+                payment_status=Bill.PaymentStatus.PAID
+            )
+
+            # Insurance Claims
+            claim_code1 = f'CLM-{today.strftime("%Y%m%d")}-01'
+            if not InsuranceClaim.objects.filter(claim_id=claim_code1).exists():
+                InsuranceClaim.objects.create(
+                    bill=bill2,
+                    patient=patients_objs['patient.alice'],
+                    claim_id=claim_code1,
+                    insurance_provider='SecureLife Insurance Company',
+                    policy_number='POL-994101',
+                    claim_amount=14500.00,
+                    status=InsuranceClaim.ClaimStatus.PENDING,
+                    notes='Cardiac ICU evaluation & Diagnostic claim.'
+                )
+
+            claim_code2 = f'CLM-{today.strftime("%Y%m%d")}-02'
+            if not InsuranceClaim.objects.filter(claim_id=claim_code2).exists():
+                InsuranceClaim.objects.create(
+                    bill=bill3,
+                    patient=patients_objs['patient.bob'],
+                    claim_id=claim_code2,
+                    insurance_provider='CoverWise Insurance',
+                    policy_number='POL-881202',
+                    claim_amount=4200.00,
+                    status=InsuranceClaim.ClaimStatus.APPROVED,
+                    notes='Neurology Consultation & Brain MRI Scan cashless claim.'
+                )
 
         self.stdout.write(self.style.SUCCESS('NextGen HealthCare Hospital demo data successfully seeded!'))
