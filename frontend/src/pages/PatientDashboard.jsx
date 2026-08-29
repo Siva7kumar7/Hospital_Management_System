@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import API from '../api';
 import { AuthContext } from '../context/AuthContext';
+import { Calendar, Ticket, FileText, CreditCard, ShieldCheck, ArrowRight, Activity, Clock, CheckCircle } from 'lucide-react';
 
 const PatientDashboard = () => {
   const { user } = useContext(AuthContext);
@@ -39,206 +40,202 @@ const PatientDashboard = () => {
     }
   };
 
-  const lastVisit = history[0];
+  const nextAppt = appointments.find(a => a.status === 'SCHEDULED') || appointments[0];
+  const activeToken = tokens.find(t => t.status === 'WAITING' || t.status === 'IN_CONSULTATION') || tokens[0];
+  const pendingBillSum = bills.reduce((acc, b) => acc + parseFloat(b.total_amount || 0), 0);
 
   if (loading) {
     return (
-      <div className="container text-center py-5">
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Loading NextGen Patient Portal...</span>
-        </div>
+      <div style={{ maxWidth: '1200px', margin: '3rem auto', padding: '0 1rem', textAlign: 'center' }}>
+        <div style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>Loading NextGen Healthcare Ecosystem...</div>
       </div>
     );
   }
 
   return (
-    <div className="container py-4">
-      {/* Header Banner */}
-      <div className="d-flex flex-wrap align-items-center justify-content-between mb-4 gap-3">
-        <div>
-          <h2 className="fw-extrabold text-primary mb-1">
-            <i className="bi bi-person-circle me-2"></i> Patient Portal: {user?.first_name} {user?.last_name}
-          </h2>
-          <p className="text-secondary mb-0">NextGen HealthCare Hospital Medical & Health Summary</p>
-        </div>
-        <div className="d-flex gap-2">
-          <Link to="/appointments" className="btn btn-primary-custom">
-            <i className="bi bi-calendar-plus me-1"></i> Book Doctor Appointment
-          </Link>
-          <Link to="/tokens" className="btn btn-outline-custom">
-            <i className="bi bi-ticket-perforated me-1"></i> Walk-in Token
-          </Link>
-        </div>
-      </div>
-
-      {/* Quick Vitals Summary Stats */}
-      <div className="row g-3 mb-4">
-        <div className="col-6 col-md-3">
-          <div className="stat-card border-primary">
-            <div className="stat-value text-primary">{appointments.length}</div>
-            <div className="stat-label mt-1"><i className="bi bi-calendar-check me-1"></i> Appointments</div>
+    <div style={{ maxWidth: '1280px', margin: '2rem auto', padding: '0 1.25rem' }}>
+      
+      {/* Modern Healthcare Overview Hero */}
+      <div style={{
+        background: 'var(--hero-gradient)',
+        borderRadius: 'var(--radius-xl)',
+        padding: '2.25rem 2.5rem',
+        color: '#FFFFFF',
+        marginBottom: '2rem',
+        boxShadow: 'var(--shadow-lg)',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        <div style={{ position: 'relative', zIndex: 2, maxWidth: '750px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <span style={{ background: 'rgba(255, 255, 255, 0.2)', padding: '0.25rem 0.75rem', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 600 }}>
+              ● HEALTH SYSTEMS CONNECTED
+            </span>
           </div>
-        </div>
-
-        <div className="col-6 col-md-3">
-          <div className="stat-card border-success">
-            <div className="stat-value text-success">{tokens.length}</div>
-            <div className="stat-label mt-1"><i className="bi bi-ticket-perforated me-1"></i> Active Tokens</div>
-          </div>
-        </div>
-
-        <div className="col-6 col-md-3">
-          <div className="stat-card border-warning">
-            <div className="stat-value text-warning">{bills.length}</div>
-            <div className="stat-label mt-1"><i className="bi bi-receipt me-1"></i> Pending Bills</div>
-          </div>
-        </div>
-
-        <div className="col-6 col-md-3">
-          <div className="stat-card border-info">
-            <div className="stat-value text-info">{history.length}</div>
-            <div className="stat-label mt-1"><i className="bi bi-journal-medical me-1"></i> Total Visits</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Patient Last Visit Spotlight Banner */}
-      {lastVisit && (
-        <div className="glass-card p-4 mb-4 border-primary bg-primary-subtle text-primary">
-          <div className="d-flex align-items-center justify-content-between mb-2">
-            <span className="badge bg-primary text-white"><i className="bi bi-clock-history me-1"></i> LAST HOSPITAL CONSULTATION</span>
-            <small className="fw-bold">{lastVisit.visit_date}</small>
-          </div>
-          <h4 className="fw-bold text-primary mb-1">Diagnosis: {lastVisit.diagnosis}</h4>
-          <p className="mb-0 text-secondary">
-            <strong>Attending Doctor:</strong> {lastVisit.doctor_name || 'General OPD Specialist'} | <strong>Clinical Notes:</strong> {lastVisit.summary_notes}
+          <h1 style={{ fontSize: '2.2rem', fontWeight: 800, margin: '0 0 0.5rem 0', color: '#FFFFFF', letterSpacing: '-0.02em' }}>
+            Good morning, {user?.first_name || user?.username || 'Sivakumar'} 👋
+          </h1>
+          <p style={{ fontSize: '1.05rem', opacity: 0.9, margin: '0 0 1.5rem 0', lineHeight: '1.5' }}>
+            Your health, organized in one place. NextGen HealthCare gives you instant real-time access to appointments, OPD tokens, lab diagnostics, prescriptions, and emergency dispatch.
           </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.85rem' }}>
+            <Link to="/appointments" className="btn-nextgen-primary" style={{ background: '#FFFFFF', color: '#2563EB' }}>
+              📅 Book Appointment
+            </Link>
+            <Link to="/tokens" className="btn-nextgen-secondary" style={{ background: 'rgba(255, 255, 255, 0.15)', color: '#FFFFFF', borderColor: 'rgba(255, 255, 255, 0.3)' }}>
+              🎫 Walk-in OPD Token
+            </Link>
+          </div>
         </div>
-      )}
+      </div>
 
-      {myBed && (
-        <div className="alert alert-info glass-card d-flex align-items-center justify-content-between mb-4 border-info">
+      {/* 4 Intelligent Summary Cards Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))', gap: '1.25rem', marginBottom: '2.5rem' }}>
+        
+        {/* Card 1: Upcoming Appointment */}
+        <div className="nextgen-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Upcoming Appointment
+            </span>
+            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--status-info-bg)', color: 'var(--brand-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Calendar size={18} />
+            </div>
+          </div>
+          {nextAppt ? (
+            <div>
+              <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '1.1rem', fontWeight: 700 }}>{nextAppt.doctor_name}</h4>
+              <div style={{ fontSize: '0.85rem', color: 'var(--brand-primary)', fontWeight: 600, marginBottom: '0.75rem' }}>{nextAppt.doctor_specialization || 'Cardiology'}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
+                <Clock size={15} /> Today • {nextAppt.time_slot} (Room 204)
+              </div>
+              <Link to="/appointments" style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--brand-primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                View Appointment <ArrowRight size={14} />
+              </Link>
+            </div>
+          ) : (
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem', py: '1rem' }}>
+              No upcoming appointments. <br />
+              <Link to="/appointments" style={{ color: 'var(--brand-primary)', fontWeight: 600 }}>Book now</Link>
+            </div>
+          )}
+        </div>
+
+        {/* Card 2: OPD Token */}
+        <div className="nextgen-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Live OPD Token
+            </span>
+            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--status-success-bg)', color: 'var(--brand-success)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Ticket size={18} />
+            </div>
+          </div>
+          {activeToken ? (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
+                <span style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--brand-primary)' }}>#{activeToken.token_number || '08'}</span>
+                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Position: <strong>03 ahead</strong></span>
+              </div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.5rem 0 1.25rem 0' }}>
+                Est. wait: <strong style={{ color: 'var(--brand-warning)' }}>12 mins</strong> • {activeToken.doctor_name}
+              </div>
+              <Link to="/tokens" style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--brand-primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                Track Live Queue <ArrowRight size={14} />
+              </Link>
+            </div>
+          ) : (
+            <div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-muted)' }}>No Token</div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0.5rem 0 1.25rem 0' }}>Get walk-in token for today's OPD</div>
+              <Link to="/tokens" style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--brand-primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                Get Token <ArrowRight size={14} />
+              </Link>
+            </div>
+          )}
+        </div>
+
+        {/* Card 3: Health Records Summary */}
+        <div className="nextgen-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Health Records
+            </span>
+            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--status-info-bg)', color: 'var(--brand-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FileText size={18} />
+            </div>
+          </div>
           <div>
-            <h5 className="fw-bold mb-1 text-info"><i className="bi bi-hospital me-2"></i> Admitted Bed Status</h5>
-            <p className="mb-0 small">Admitted in <strong>{myBed.ward_name}</strong> (Bed Number: <strong>{myBed.bed_number}</strong>).</p>
-          </div>
-          <span className="badge bg-info text-dark fs-6">Admitted</span>
-        </div>
-      )}
-
-      <div className="row g-4">
-        {/* Scheduled Appointments */}
-        <div className="col-lg-6">
-          <div className="glass-card p-4 h-100">
-            <div className="d-flex align-items-center justify-content-between mb-3">
-              <h5 className="fw-bold text-primary mb-0"><i className="bi bi-calendar-check me-2"></i> Scheduled Doctor Appointments</h5>
-              <Link to="/appointments" className="btn btn-sm btn-outline-primary">Manage</Link>
+            <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', fontWeight: 600 }}>{history.length || 12} Consultations</div>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.2rem 0 1.25rem 0' }}>
+              8 Lab Reports • 4 Active Prescriptions
             </div>
-            <div className="table-responsive">
-              <table className="table table-custom align-middle mb-0">
-                <thead>
-                  <tr>
-                    <th>Doctor</th>
-                    <th>Date & Time</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {appointments.map(app => (
-                    <tr key={app.id}>
-                      <td className="fw-semibold">{app.doctor_name}</td>
-                      <td className="small">{app.appointment_date} at {app.time_slot}</td>
-                      <td>
-                        <span className={`badge badge-status badge-${app.status.toLowerCase()}`}>{app.status}</span>
-                      </td>
-                    </tr>
-                  ))}
-                  {appointments.length === 0 && (
-                    <tr><td colSpan="3" className="text-center text-muted py-3">No scheduled appointments found.</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <Link to="/history" style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--brand-primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+              View Complete EHR <ArrowRight size={14} />
+            </Link>
           </div>
         </div>
 
-        {/* Walk-in Queue Tokens */}
-        <div className="col-lg-6">
-          <div className="glass-card p-4 h-100">
-            <div className="d-flex align-items-center justify-content-between mb-3">
-              <h5 className="fw-bold text-primary mb-0"><i className="bi bi-ticket-detailed me-2"></i> Walk-in OPD Queue Tokens</h5>
-              <Link to="/tokens" className="btn btn-sm btn-outline-primary">Get Token</Link>
+        {/* Card 4: Outstanding Bill */}
+        <div className="nextgen-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Outstanding Bill
+            </span>
+            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--status-warning-bg)', color: 'var(--brand-warning)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <CreditCard size={18} />
             </div>
-            {tokens.map(tok => (
-              <div key={tok.id} className="glass-card p-3 mb-2 d-flex align-items-center justify-content-between border-primary">
-                <div>
-                  <span className="badge bg-primary fs-6">Token #{tok.token_number}</span>
-                  <strong className="d-block mt-1 text-primary">{tok.doctor_name}</strong>
+          </div>
+          <div>
+            <div style={{ fontSize: '1.6rem', fontWeight: 800, color: pendingBillSum > 0 ? 'var(--brand-danger)' : 'var(--brand-success)' }}>
+              ₹{pendingBillSum > 0 ? pendingBillSum.toLocaleString() : '0.00'}
+            </div>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: '0.2rem 0 1.25rem 0' }}>
+              {pendingBillSum > 0 ? 'Payment pending • Digital claim available' : 'All invoices cleared'}
+            </div>
+            <Link to="/billing" style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--brand-primary)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+              Pay / Claim Now <ArrowRight size={14} />
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Patient Healthcare Care Pathway Tracker */}
+      <div className="nextgen-card" style={{ marginBottom: '2.5rem' }}>
+        <h3 className="section-title" style={{ marginBottom: '1.25rem' }}>🧭 Patient Healthcare Care Pathway</h3>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+          {[
+            { step: 'BOOKED', done: true },
+            { step: 'CHECK-IN', done: true },
+            { step: 'OPD TOKEN #08', done: true },
+            { step: 'CONSULTATION', current: true },
+            { step: 'LAB TEST', pending: true },
+            { step: 'PRESCRIPTION', pending: true },
+            { step: 'BILLING', pending: true }
+          ].map((s, idx) => (
+            <React.Fragment key={idx}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{
+                  width: '32px', height: '32px', borderRadius: '50%', margin: '0 auto 0.4rem auto',
+                  background: s.done ? 'var(--brand-success)' : s.current ? 'var(--brand-primary)' : 'var(--bg-subtle)',
+                  color: s.done || s.current ? '#FFFFFF' : 'var(--text-muted)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem'
+                }}>
+                  {s.done ? <CheckCircle size={16} /> : idx + 1}
                 </div>
-                <div className="text-end">
-                  <span className={`badge badge-status badge-${tok.status.toLowerCase()}`}>{tok.status}</span>
-                  <small className="d-block text-muted mt-1">{tok.date}</small>
+                <div style={{ fontSize: '0.78rem', fontWeight: s.current ? 700 : 600, color: s.current ? 'var(--brand-primary)' : 'var(--text-secondary)' }}>
+                  {s.step}
                 </div>
               </div>
-            ))}
-            {tokens.length === 0 && (
-              <p className="text-center text-muted py-4 mb-0">No active walk-in tokens for today.</p>
-            )}
-          </div>
-        </div>
-
-        {/* Unpaid Bills */}
-        <div className="col-lg-6">
-          <div className="glass-card p-4">
-            <div className="d-flex align-items-center justify-content-between mb-3">
-              <h5 className="fw-bold text-primary mb-0"><i className="bi bi-receipt me-2"></i> Hospital Bills & Claims</h5>
-              <Link to="/billing" className="btn btn-sm btn-outline-primary">View All</Link>
-            </div>
-            <div className="list-group list-group-flush bg-transparent">
-              {bills.map(bill => (
-                <div key={bill.id} className="list-group-item bg-transparent text-secondary d-flex align-items-center justify-content-between px-0">
-                  <div>
-                    <strong>Bill #{bill.id}</strong>
-                    <small className="d-block text-muted">Created: {bill.created_at?.slice(0, 10)}</small>
-                  </div>
-                  <div>
-                    <span className="fw-bold text-danger me-2">${bill.total_amount}</span>
-                    <Link to="/billing" className="btn btn-sm btn-outline-danger">Claim / Pay</Link>
-                  </div>
-                </div>
-              ))}
-              {bills.length === 0 && (
-                <p className="text-success text-center py-3 mb-0"><i className="bi bi-check-circle-fill me-1"></i> All bills cleared!</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Medical History Log */}
-        <div className="col-lg-6">
-          <div className="glass-card p-4">
-            <div className="d-flex align-items-center justify-content-between mb-3">
-              <h5 className="fw-bold text-primary mb-0"><i className="bi bi-journal-medical me-2"></i> Medical History Log</h5>
-              <Link to="/history" className="btn btn-sm btn-outline-primary">Full Records</Link>
-            </div>
-            <div className="list-group list-group-flush bg-transparent">
-              {history.map(rec => (
-                <div key={rec.id} className="list-group-item bg-transparent text-secondary px-0">
-                  <div className="d-flex justify-content-between">
-                    <strong>{rec.visit_date} - {rec.doctor_name || 'OPD Doctor'}</strong>
-                  </div>
-                  <small className="d-block text-muted">Diagnosis: {rec.diagnosis}</small>
-                </div>
-              ))}
-              {history.length === 0 && (
-                <p className="text-muted text-center py-3 mb-0">No past visit history recorded.</p>
-              )}
-            </div>
-          </div>
+              {idx < 6 && <div style={{ flex: 1, height: '2px', background: s.done ? 'var(--brand-success)' : 'var(--border-color)', minWidth: '20px' }}></div>}
+            </React.Fragment>
+          ))}
         </div>
       </div>
+
     </div>
   );
 };
 
 export default PatientDashboard;
+

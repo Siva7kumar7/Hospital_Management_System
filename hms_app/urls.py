@@ -13,6 +13,14 @@ router.register(r'history', api_views.PatientHistoryViewSet, basename='history')
 router.register(r'bills', api_views.BillViewSet, basename='bill')
 router.register(r'claims', api_views.InsuranceClaimViewSet, basename='claim')
 router.register(r'ambulances', api_views.AmbulanceViewSet, basename='ambulance')
+router.register(r'lab-tests', api_views.LabTestViewSet, basename='lab-test')
+router.register(r'lab-orders', api_views.LabOrderViewSet, basename='lab-order')
+router.register(r'medicines', api_views.MedicineViewSet, basename='medicine')
+router.register(r'pharmacy-dispenses', api_views.PharmacyDispenseViewSet, basename='pharmacy-dispense')
+router.register(r'vitals', api_views.PatientVitalsViewSet, basename='vital')
+router.register(r'triage', api_views.EmergencyTriageViewSet, basename='triage')
+router.register(r'audit-logs', api_views.AuditLogViewSet, basename='audit-log')
+router.register(r'notifications', api_views.NotificationViewSet, basename='notification')
 
 urlpatterns = [
     # REST API endpoints
@@ -23,5 +31,8 @@ urlpatterns = [
     path('api/auth/me/', api_views.api_current_user, name='api_current_user'),
     path('api/dashboard/stats/', api_views.api_admin_dashboard_stats, name='api_admin_dashboard_stats'),
     path('api/search/', api_views.api_global_search, name='api_global_search'),
+    path('api/ai/symptom-assistant/', api_views.api_ai_symptom_assistant, name='api_ai_symptom_assistant'),
+    path('api/ai/clinical-summary/', api_views.api_ai_clinical_summary, name='api_ai_clinical_summary'),
     path('api/', include(router.urls)),
 ]
+

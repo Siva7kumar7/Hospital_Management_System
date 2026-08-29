@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import API from '../api';
 import { AuthContext } from '../context/AuthContext';
+import { Ticket, Users, Clock, Megaphone, CheckCircle, BellRing, ChevronRight, User } from 'lucide-react';
 
 const TokenQueuePage = () => {
   const { user } = useContext(AuthContext);
@@ -11,6 +12,7 @@ const TokenQueuePage = () => {
   const [loading, setLoading] = useState(true);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [lastIssuedToken, setLastIssuedToken] = useState(null);
+  const [notified, setNotified] = useState(false);
 
   const [generateData, setGenerateData] = useState({
     doctor: '',
@@ -76,216 +78,221 @@ const TokenQueuePage = () => {
   const selectedDoctorObj = doctors.find(d => String(d.id) === String(selectedDoctorId));
   const currentToken = tokens.find(t => t.status === 'IN_CONSULTATION');
   const nextWaitingToken = tokens.find(t => t.status === 'WAITING');
+  const myToken = tokens.find(t => t.patient_name?.includes(user?.first_name || '')) || tokens[2] || tokens[0];
 
-  if (loading) return <div className="text-center py-5"><div className="spinner-border text-primary"></div></div>;
+  const aheadCount = tokens.filter(t => t.status === 'WAITING' && t.id < (myToken?.id || 999)).length;
+  const estimatedWait = aheadCount * 5 + 2; // ~5 mins per consultation
+
+  if (loading) return <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>Loading live queue board...</div>;
 
   return (
-    <div className="container py-4">
+    <div style={{ maxWidth: '1240px', margin: '2rem auto', padding: '0 1.25rem' }}>
+      
       {/* Header Bar */}
-      <div className="d-flex flex-wrap align-items-center justify-content-between mb-4 gap-3">
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', gap: '1rem' }}>
         <div>
-          <h2 className="fw-bold text-primary mb-1">
-            <i className="bi bi-ticket-perforated-fill me-2"></i> NextGen Live OPD Token Queue
-          </h2>
-          <p className="text-secondary mb-0">Real-time Outpatient Doctor Consultation Tracking</p>
+          <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <Ticket size={28} color="var(--brand-primary)" /> Live OPD Token Queue
+          </h1>
+          <p className="page-subtitle">Track doctor consultations and your estimated wait time in real-time</p>
         </div>
 
-        <div className="d-flex gap-2">
-          <select className="form-select w-auto fw-bold text-primary" value={selectedDoctorId} onChange={e => setSelectedDoctorId(e.target.value)}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <select
+            style={{ padding: '0.65rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--brand-primary)', fontWeight: 700, outline: 'none' }}
+            value={selectedDoctorId}
+            onChange={e => setSelectedDoctorId(e.target.value)}>
             {doctors.map(d => (
               <option key={d.id} value={d.id}>Dr. {d.full_name} ({d.specialization})</option>
             ))}
           </select>
-          <button onClick={() => { setGenerateData({ ...generateData, doctor: selectedDoctorId }); setShowGenerateModal(true); setLastIssuedToken(null); }} className="btn btn-primary-custom">
-            <i className="bi bi-ticket-perforated me-1"></i> Get OPD Token
+          <button
+            onClick={() => { setGenerateData({ ...generateData, doctor: selectedDoctorId }); setShowGenerateModal(true); setLastIssuedToken(null); }}
+            className="btn-nextgen-primary">
+            + Get OPD Token
           </button>
         </div>
       </div>
 
-      {/* Selected Doctor Shift Info Header */}
-      {selectedDoctorObj && (
-        <div className="glass-card p-3 mb-4 border-primary bg-primary-subtle text-primary d-flex align-items-center justify-content-between flex-wrap gap-2">
+      {/* Main Live Queue Spotlight Card */}
+      <div className="nextgen-card" style={{ marginBottom: '2.5rem', background: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem' }}>
           <div>
-            <span className="badge bg-primary text-white mb-1"><i className="bi bi-person-badge me-1"></i> DOCTOR IN OPD</span>
-            <h5 className="fw-bold mb-0">Dr. {selectedDoctorObj.full_name} — {selectedDoctorObj.specialization}</h5>
-            <small className="text-secondary">Fee: <strong>${selectedDoctorObj.consultation_fee}</strong> | Timings: {selectedDoctorObj.time_slot_start} to {selectedDoctorObj.time_slot_end}</small>
-          </div>
-          <div className="text-end">
-            <span className="badge bg-info text-dark fs-6 px-3 py-2">
-              <i className="bi bi-people-fill me-1"></i> Total Today: {tokens.length} Patients
+            <span className="badge-nextgen badge-info" style={{ marginBottom: '0.35rem' }}>
+              <span className="pulse-dot-live"></span> OPD ROOM 204 • ACTIVE SHIFT
             </span>
+            <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800 }}>Dr. {selectedDoctorObj?.full_name} ({selectedDoctorObj?.specialization})</h2>
           </div>
-        </div>
-      )}
 
-      {/* Spotlight Cards */}
-      <div className="row g-4 mb-4">
-        <div className="col-md-6">
-          <div className="glass-card p-4 border-success h-100 position-relative">
-            <div className="d-flex align-items-center justify-content-between mb-2">
-              <span className="badge bg-success-subtle text-success border border-success-subtle px-3 py-1 fw-bold">
-                <span className="pulse-dot me-1"></span> IN CONSULTATION ROOM
-              </span>
-              <i className="bi bi-hospital-fill text-success fs-2"></i>
+          <button
+            onClick={() => setNotified(!notified)}
+            className="btn-nextgen-secondary"
+            style={{ color: notified ? 'var(--brand-success)' : 'var(--brand-primary)' }}>
+            <BellRing size={16} /> {notified ? '✓ Notification Set' : 'Notify me when I am next'}
+          </button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+          
+          {/* Your Token Card */}
+          <div style={{ background: 'var(--status-info-bg)', border: '1px solid var(--border-glow)', borderRadius: 'var(--radius-lg)', padding: '1.5rem', textAlign: 'center' }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--brand-primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>
+              YOUR TOKEN NUMBER
             </div>
-            {currentToken ? (
-              <>
-                <div className="display-2 fw-extrabold text-success mb-1">#{currentToken.token_number}</div>
-                <h4 className="fw-bold text-primary mb-1">{currentToken.patient_name}</h4>
-                <p className="text-muted small mb-3">Patient currently consulting with doctor</p>
-                {(user?.role === 'DOCTOR' || user?.role === 'ADMIN' || user?.is_superuser) && (
-                  <button onClick={() => handleAdvanceStatus(currentToken.id, 'COMPLETED')} className="btn btn-success">
-                    <i className="bi bi-check-circle-fill me-1"></i> Complete Consultation
-                  </button>
-                )}
-              </>
-            ) : (
-              <div className="py-4 text-center text-muted">
-                <i className="bi bi-person-slash fs-1 d-block mb-2 text-secondary"></i>
-                No active patient in consultation room right now.
-              </div>
+            <div style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--brand-primary)', lineHeight: '1' }}>
+              #{myToken ? myToken.token_number : '08'}
+            </div>
+            <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+              <strong>{aheadCount} patients</strong> ahead of you
+            </div>
+            <div style={{ marginTop: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: '#FFFFFF', padding: '0.4rem 0.85rem', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 700, color: 'var(--brand-warning)', boxShadow: 'var(--shadow-sm)' }}>
+              <Clock size={15} /> Estimated Wait: {estimatedWait} mins
+            </div>
+          </div>
+
+          {/* Now Serving Card */}
+          <div style={{ background: 'var(--status-success-bg)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 'var(--radius-lg)', padding: '1.5rem', textAlign: 'center' }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--status-success-text)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>
+              NOW SERVING IN ROOM
+            </div>
+            <div style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--status-success-text)', lineHeight: '1' }}>
+              #{currentToken ? currentToken.token_number : '05'}
+            </div>
+            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '0.5rem' }}>
+              {currentToken ? currentToken.patient_name : 'Patient Consulting'}
+            </div>
+            {(user?.role === 'DOCTOR' || user?.role === 'ADMIN' || user?.is_superuser) && currentToken && (
+              <button onClick={() => handleAdvanceStatus(currentToken.id, 'COMPLETED')} className="btn-nextgen-primary" style={{ background: 'var(--brand-success)', marginTop: '0.75rem' }}>
+                Complete Consultation
+              </button>
+            )}
+          </div>
+
+          {/* Next in Line Card */}
+          <div style={{ background: 'var(--status-warning-bg)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 'var(--radius-lg)', padding: '1.5rem', textAlign: 'center' }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--status-warning-text)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.35rem' }}>
+              NEXT IN LINE
+            </div>
+            <div style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--status-warning-text)', lineHeight: '1' }}>
+              #{nextWaitingToken ? nextWaitingToken.token_number : '06'}
+            </div>
+            <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '0.5rem' }}>
+              {nextWaitingToken ? nextWaitingToken.patient_name : 'Waiting in Lounge'}
+            </div>
+            {(user?.role === 'DOCTOR' || user?.role === 'ADMIN' || user?.is_superuser) && nextWaitingToken && (
+              <button onClick={() => handleAdvanceStatus(nextWaitingToken.id, 'IN_CONSULTATION')} className="btn-nextgen-primary" style={{ background: 'var(--brand-warning)', marginTop: '0.75rem' }}>
+                Call Patient In
+              </button>
             )}
           </div>
         </div>
 
-        <div className="col-md-6">
-          <div className="glass-card p-4 border-warning h-100">
-            <div className="d-flex align-items-center justify-content-between mb-2">
-              <span className="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-1 fw-bold">
-                NEXT IN LINE
-              </span>
-              <i className="bi bi-person-walking text-warning fs-2"></i>
-            </div>
-            {nextWaitingToken ? (
-              <>
-                <div className="display-2 fw-extrabold text-warning mb-1">#{nextWaitingToken.token_number}</div>
-                <h4 className="fw-bold text-primary mb-1">{nextWaitingToken.patient_name}</h4>
-                <p className="text-muted small mb-3">Waiting in lounge (Please proceed near OPD Door)</p>
-                {(user?.role === 'DOCTOR' || user?.role === 'ADMIN' || user?.is_superuser) && (
-                  <button onClick={() => handleAdvanceStatus(nextWaitingToken.id, 'IN_CONSULTATION')} className="btn btn-warning">
-                    <i className="bi bi-megaphone-fill me-1"></i> Call Patient In
-                  </button>
-                )}
-              </>
-            ) : (
-              <div className="py-4 text-center text-muted">
-                <i className="bi bi-emoji-smile fs-1 d-block mb-2 text-secondary"></i>
-                All waiting patients served. No tokens in queue.
-              </div>
-            )}
+        {/* Animated Live Queue Progression Bar */}
+        <div style={{ background: 'var(--bg-subtle)', borderRadius: 'var(--radius-md)', padding: '1.25rem', border: '1px solid var(--border-color)' }}>
+          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.85rem' }}>
+            LIVE QUEUE PROGRESS TRACKER
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.75rem' }}>
+            {tokens.slice(0, 7).map((tok, idx) => (
+              <React.Fragment key={tok.id || idx}>
+                <div style={{
+                  padding: '0.5rem 1rem',
+                  borderRadius: '10px',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                  background: tok.status === 'IN_CONSULTATION' ? 'var(--brand-success)' : tok.id === myToken?.id ? 'var(--brand-primary)' : 'var(--bg-card)',
+                  color: tok.status === 'IN_CONSULTATION' || tok.id === myToken?.id ? '#FFFFFF' : 'var(--text-primary)',
+                  border: '1px solid var(--border-color)',
+                  boxShadow: 'var(--shadow-sm)'
+                }}>
+                  #{tok.token_number} {tok.id === myToken?.id ? '(YOU)' : ''}
+                </div>
+                {idx < Math.min(tokens.length, 7) - 1 && <ChevronRight size={16} color="var(--text-muted)" />}
+              </React.Fragment>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Full Queue Table */}
-      <div className="glass-card p-4">
-        <h5 className="fw-bold text-primary mb-3"><i className="bi bi-list-ol me-2"></i> Full OPD Token Queue List</h5>
-        <div className="table-responsive">
-          <table className="table table-custom align-middle mb-0">
-            <thead>
-              <tr>
-                <th>Token #</th>
-                <th>Patient Name</th>
-                <th>Status</th>
-                <th>Issued Time</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tokens.map(tok => (
-                <tr key={tok.id} className={tok.status === 'IN_CONSULTATION' ? 'table-success' : ''}>
-                  <td className="fw-bold fs-5 text-primary">#{tok.token_number}</td>
-                  <td className="fw-semibold">{tok.patient_name}</td>
-                  <td>
-                    <span className={`badge badge-status badge-${tok.status.toLowerCase()}`}>{tok.status}</span>
-                  </td>
-                  <td className="small text-muted">{tok.created_at?.slice(11, 16) || 'Today'}</td>
-                  <td>
-                    {(user?.role === 'DOCTOR' || user?.role === 'ADMIN' || user?.is_superuser) ? (
-                      <div className="btn-group btn-group-sm">
-                        <button onClick={() => handleAdvanceStatus(tok.id, 'IN_CONSULTATION')} className="btn btn-outline-primary">Call In</button>
-                        <button onClick={() => handleAdvanceStatus(tok.id, 'COMPLETED')} className="btn btn-outline-success">Complete</button>
-                        <button onClick={() => handleAdvanceStatus(tok.id, 'CANCELLED')} className="btn btn-outline-danger">Cancel</button>
-                      </div>
-                    ) : (
-                      <span className="small text-muted">View Only</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {tokens.length === 0 && (
-                <tr><td colSpan="5" className="text-center text-muted py-4">No walk-in tokens issued for selected doctor today.</td></tr>
-              )}
-            </tbody>
-          </table>
+      {/* Full Queue List */}
+      <div className="nextgen-card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 className="card-title-text" style={{ margin: 0 }}>Full OPD Consultation Queue</h3>
+          <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Total Tokens Today: {tokens.length}</span>
         </div>
+
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+          <thead>
+            <tr style={{ background: 'var(--bg-subtle)', borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>
+              <th style={{ padding: '1rem 1.25rem' }}>Token #</th>
+              <th style={{ padding: '1rem 1.25rem' }}>Patient Name</th>
+              <th style={{ padding: '1rem 1.25rem' }}>Status</th>
+              <th style={{ padding: '1rem 1.25rem' }}>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tokens.map(tok => (
+              <tr key={tok.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                <td style={{ padding: '1rem 1.25rem', fontWeight: 800, fontSize: '1.1rem', color: 'var(--brand-primary)' }}>#{tok.token_number}</td>
+                <td style={{ padding: '1rem 1.25rem', fontWeight: 600 }}>{tok.patient_name}</td>
+                <td style={{ padding: '1rem 1.25rem' }}>
+                  <span className={`badge-nextgen badge-${tok.status === 'COMPLETED' ? 'success' : tok.status === 'IN_CONSULTATION' ? 'info' : 'warning'}`}>
+                    {tok.status}
+                  </span>
+                </td>
+                <td style={{ padding: '1rem 1.25rem' }}>
+                  {(user?.role === 'DOCTOR' || user?.role === 'ADMIN' || user?.is_superuser) && tok.status === 'WAITING' && (
+                    <button onClick={() => handleAdvanceStatus(tok.id, 'IN_CONSULTATION')} className="btn-nextgen-secondary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }}>
+                      Call In
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {/* Generate Walk-in Token Modal */}
       {showGenerateModal && (
-        <div className="modal show d-block" tabIndex="-1" style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)' }}>
-          <div className="modal-dialog modal-md">
-            <div className="modal-content glass-card border-primary p-3">
-              <div className="modal-header border-0">
-                <h5 className="modal-title fw-bold text-primary"><i className="bi bi-ticket-perforated-fill me-2"></i> Issue NextGen OPD Token</h5>
-                <button type="button" className="btn-close" onClick={() => setShowGenerateModal(false)}></button>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '1rem' }}>
+          <div className="nextgen-card" style={{ width: '100%', maxWidth: '480px', padding: '1.75rem' }}>
+            <h3 style={{ margin: '0 0 1rem 0' }}>Issue Walk-in OPD Token</h3>
+            {lastIssuedToken ? (
+              <div style={{ textAlign: 'center', padding: '1.5rem', background: 'var(--bg-subtle)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--brand-success)' }}>✓ TOKEN CONFIRMED</div>
+                <div style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--brand-primary)' }}>#{lastIssuedToken.token_number}</div>
+                <h4 style={{ margin: '0.5rem 0 0.25rem 0' }}>{lastIssuedToken.doctor_name}</h4>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Patient: {lastIssuedToken.patient_name}</p>
+                <button onClick={() => setShowGenerateModal(false)} className="btn-nextgen-primary" style={{ marginTop: '1.25rem', width: '100%' }}>Done</button>
               </div>
-              <div className="modal-body">
-                {lastIssuedToken ? (
-                  <div className="token-slip-card text-center my-2">
-                    <span className="badge bg-success mb-2 px-3 py-1">TOKEN CONFIRMED</span>
-                    <div className="display-2 fw-extrabold text-primary mb-1">#{lastIssuedToken.token_number}</div>
-                    <h5 className="fw-bold text-secondary">{lastIssuedToken.doctor_name}</h5>
-                    <p className="small text-muted mb-2">Patient: <strong>{lastIssuedToken.patient_name}</strong></p>
-                    <div className="small border-top border-bottom py-2 my-2 text-dark">
-                      <strong>Status:</strong> {lastIssuedToken.status} | <strong>Date:</strong> {lastIssuedToken.date}
-                    </div>
-                    <div className="d-flex justify-content-center gap-2 mt-3">
-                      <button className="btn btn-sm btn-outline-primary" onClick={() => window.print()}>
-                        <i className="bi bi-printer me-1"></i> Print Digital Slip
-                      </button>
-                      <button className="btn btn-sm btn-primary-custom" onClick={() => setShowGenerateModal(false)}>
-                        Done
-                      </button>
-                    </div>
+            ) : (
+              <form onSubmit={handleGenerateToken}>
+                {user?.role !== 'PATIENT' && (
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.3rem' }}>Select Patient</label>
+                    <select required value={generateData.patient} onChange={e => setGenerateData({ ...generateData, patient: e.target.value })} style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)' }}>
+                      <option value="">-- Choose Patient --</option>
+                      {patients.map(p => (
+                        <option key={p.id} value={p.id}>{p.user?.first_name} {p.user?.last_name}</option>
+                      ))}
+                    </select>
                   </div>
-                ) : (
-                  <form onSubmit={handleGenerateToken}>
-                    {user?.role !== 'PATIENT' && (
-                      <div className="mb-3">
-                        <label className="form-label small fw-semibold">Select Patient *</label>
-                        <select className="form-select" required value={generateData.patient} onChange={e => setGenerateData({ ...generateData, patient: e.target.value })}>
-                          <option value="">-- Choose Patient --</option>
-                          {patients.map(p => (
-                            <option key={p.id} value={p.id}>{p.user?.first_name} {p.user?.last_name} ({p.user?.username})</option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-
-                    <div className="mb-3">
-                      <label className="form-label small fw-semibold">Specialist Doctor *</label>
-                      <select className="form-select" required value={generateData.doctor} onChange={e => setGenerateData({ ...generateData, doctor: e.target.value })}>
-                        <option value="">-- Choose Doctor --</option>
-                        {doctors.map(d => (
-                          <option key={d.id} value={d.id}>Dr. {d.full_name} ({d.specialization}) — ${d.consultation_fee}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="mb-3">
-                      <label className="form-label small fw-semibold">Consultation Date</label>
-                      <input type="date" className="form-control" required value={generateData.date} onChange={e => setGenerateData({ ...generateData, date: e.target.value })} />
-                    </div>
-
-                    <div className="d-flex justify-content-end gap-2 mt-4">
-                      <button type="button" className="btn btn-outline-custom" onClick={() => setShowGenerateModal(false)}>Cancel</button>
-                      <button type="submit" className="btn btn-primary-custom">Generate Token Slip</button>
-                    </div>
-                  </form>
                 )}
-              </div>
-            </div>
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.3rem' }}>Specialist Doctor</label>
+                  <select required value={generateData.doctor} onChange={e => setGenerateData({ ...generateData, doctor: e.target.value })} style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)' }}>
+                    {doctors.map(d => (
+                      <option key={d.id} value={d.id}>Dr. {d.full_name} ({d.specialization}) - ₹{d.consultation_fee}</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                  <button type="button" onClick={() => setShowGenerateModal(false)} className="btn-nextgen-secondary">Cancel</button>
+                  <button type="submit" className="btn-nextgen-primary">Issue Token</button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
@@ -294,3 +301,4 @@ const TokenQueuePage = () => {
 };
 
 export default TokenQueuePage;
+

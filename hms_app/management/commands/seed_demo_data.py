@@ -418,4 +418,88 @@ class Command(BaseCommand):
                     notes='Neurology Consultation & Brain MRI Scan cashless claim.'
                 )
 
+        # 10. Seed Enterprise Modules (Lab Tests, Medicines, Vitals, Triage, Audit Logs)
+        from hms_app.models import LabTest, LabOrder, LabReport, Medicine, PatientVitals, EmergencyTriage, AuditLog
+
+        lab_tests = [
+            ('CBC (Complete Blood Count)', 'LAB-CBC', 'Hematology', 450.00, '12.0 - 16.0', 'g/dL'),
+            ('Fasting Blood Glucose', 'LAB-FBG', 'Biochemistry', 250.00, '70 - 99', 'mg/dL'),
+            ('Lipid Profile Panel', 'LAB-LIP', 'Biochemistry', 850.00, '< 200', 'mg/dL'),
+            ('Thyroid Stimulating Hormone (TSH)', 'LAB-TSH', 'Endocrinology', 600.00, '0.4 - 4.0', 'mIU/L'),
+            ('Urine Routine Analysis', 'LAB-URN', 'Pathology', 200.00, 'Normal / Negative', 'N/A'),
+        ]
+        for name, code, cat, cost, nrange, unit in lab_tests:
+            LabTest.objects.get_or_create(
+                code=code,
+                defaults={
+                    'name': name,
+                    'category': cat,
+                    'cost': cost,
+                    'normal_range': nrange,
+                    'unit': unit
+                }
+            )
+
+        medicines = [
+            ('Paracetamol 500mg', 'Analgesics', 250, 30, 2.50),
+            ('Amoxicillin 500mg', 'Antibiotics', 85, 20, 8.00),
+            ('Atorvastatin 10mg', 'Cardiovascular', 120, 25, 12.00),
+            ('Metformin 500mg', 'Antidiabetic', 180, 40, 5.00),
+            ('Amlodipine 5mg', 'Antihypertensive', 15, 25, 4.50), # Low stock trigger
+            ('Cetirizine 10mg', 'Antihistamines', 300, 50, 3.00),
+        ]
+        for name, cat, stock, reorder, price in medicines:
+            Medicine.objects.get_or_create(
+                name=name,
+                defaults={
+                    'category': cat,
+                    'stock_quantity': stock,
+                    'reorder_level': reorder,
+                    'unit_price': price,
+                    'expiry_date': date.today() + timedelta(days=365)
+                }
+            )
+
+        # Seed Vitals for Alice
+        if not PatientVitals.objects.filter(patient=patients_objs['patient.alice']).exists():
+            PatientVitals.objects.create(
+                patient=patients_objs['patient.alice'],
+                recorded_by=admin_user,
+                temperature='98.4 °F',
+                blood_pressure='128/82 mmHg',
+                pulse_rate=76,
+                oxygen_saturation=99,
+                respiratory_rate=16,
+                notes='Patient stable on routine cardiac follow-up.'
+            )
+
+        # Seed Emergency Triage
+        if not EmergencyTriage.objects.exists():
+            EmergencyTriage.objects.create(
+                patient_name='David Warner',
+                contact_number='+91 9876543210',
+                chief_complaint='Acute sternal chest pain and diaphoresis',
+                priority=EmergencyTriage.Priority.CRITICAL,
+                assigned_doctor=doctors_objs['dr.mehta'],
+                status='TRIAGED'
+            )
+            EmergencyTriage.objects.create(
+                patient_name='Elena Rostova',
+                contact_number='+91 9876543211',
+                chief_complaint='High fever 103°F with chills',
+                priority=EmergencyTriage.Priority.HIGH,
+                assigned_doctor=doctors_objs['dr.patel'],
+                status='TRIAGED'
+            )
+
+        # Seed Audit Logs
+        if not AuditLog.objects.exists():
+            AuditLog.objects.create(
+                user=admin_user,
+                action="SYSTEM_INIT",
+                details="NextGen HealthCare Hospital Platform database initialized with seed data.",
+                ip_address="127.0.0.1"
+            )
+
         self.stdout.write(self.style.SUCCESS('NextGen HealthCare Hospital demo data successfully seeded!'))
+

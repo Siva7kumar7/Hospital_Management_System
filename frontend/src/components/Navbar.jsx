@@ -1,215 +1,187 @@
-import React, { useContext, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useContext, useState, useEffect } from 'react';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../context/ThemeContext';
+import CommandSearchModal from './CommandSearchModal';
+import NotificationDrawer from './NotificationDrawer';
+import MobileBottomNav from './MobileBottomNav';
+import { Search, Bell, Sun, Moon, LogOut, User as UserIcon, Activity, Stethoscope, Calendar, Ticket, TestTube, Pill, FileText, CreditCard, ShieldCheck } from 'lucide-react';
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
   const { theme, toggleTheme } = useContext(ThemeContext);
-  const [searchQuery, setSearchQuery] = useState('');
-  const navigate = useNavigate();
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [showNotifDrawer, setShowNotifDrawer] = useState(false);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-    }
-  };
+  useEffect(() => {
+    const handleOpenSearch = () => setShowSearchModal(true);
+    window.addEventListener('open-command-search', handleOpenSearch);
+    return () => window.removeEventListener('open-command-search', handleOpenSearch);
+  }, []);
 
   const getDashboardLink = () => {
     if (!user) return '/login';
     if (user.role === 'ADMIN' || user.is_superuser) return '/admin-dashboard';
     if (user.role === 'DOCTOR') return '/doctor-dashboard';
     if (user.role === 'PATIENT') return '/patient-dashboard';
+    if (user.role === 'NURSE') return '/nurse';
     return '/';
   };
 
   return (
     <>
-        {/* Top Hospital Info & Emergency Banner
-        <div className="bg-dark text-white py-1.5 px-3 small d-none d-md-block border-bottom border-secondary">
-          <div className="container-fluid d-flex justify-content-between align-items-center">
-            <div className="d-flex align-items-center gap-3">
-              <span>
-                <i className="bi bi-geo-alt-fill text-danger me-1"></i> No. 24, Health Street, Gandhipuram, Coimbatore - 641012, Tamil Nadu, India
-              </span>
-              <span className="text-secondary">|</span>
-              <span>
-                <i className="bi bi-telephone-fill text-primary me-1"></i> Helpline: +91 422-1234567
-              </span>
+      <header className="nextgen-navbar">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: '1440px', margin: '0 auto' }}>
+          
+          {/* Brand Logo & Live Indicator */}
+          <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{
+              width: '40px', height: '40px', borderRadius: '12px',
+              background: 'var(--brand-gradient)', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', color: '#FFFFFF', fontWeight: 800, fontSize: '1.2rem',
+              boxShadow: 'var(--shadow-sm)'
+            }}>
+              N
             </div>
-            <div className="d-flex align-items-center gap-3">
-              <span className="badge bg-danger text-white px-2 py-1 d-flex align-items-center gap-1">
-                <span className="pulse-dot-danger"></span> Emergency SOS: +91 422-1234567 / 108
-              </span>
-              <span>
-                <i className="bi bi-clock-fill text-warning me-1"></i> OPD Shifts: 09:00 AM - 08:00 PM
-              </span>
-            </div>
-          </div>
-        </div> */}
-
-      <nav className="navbar navbar-expand-lg navbar-custom">
-        <div className="container-fluid">
-          <Link className="navbar-brand me-4 d-flex align-items-center gap-2" to="/">
-            <img 
-              src="/logo.png" 
-              alt="NextGen HealthCare Logo" 
-              style={{ height: '42px', width: 'auto', objectFit: 'contain' }}
-              className="rounded"
-            />
-            <div className="d-flex flex-column">
-              <div className="d-flex align-items-center gap-2">
-                <span className="lh-1 fw-extrabold" style={{ fontSize: '1.25rem' }}>NextGen HealthCare</span>
-                <span className="pulse-dot" title="Systems Active"></span>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontWeight: 800, fontSize: '1.15rem', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+                  NextGen
+                </span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--brand-primary)' }}>HealthCare</span>
+                <span className="pulse-dot-live" title="Hospital Systems Live & Connected"></span>
               </div>
-              <small className="text-muted font-normal" style={{ fontSize: '0.65rem', letterSpacing: '0.05em' }}>
-                HOSPITAL & SUPER SPECIALITY CENTER
-              </small>
+              <div style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                Connected Care • Smarter Healthcare
+              </div>
             </div>
           </Link>
 
-          <button className="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
-            <i className="bi bi-list fs-2 text-primary"></i>
-          </button>
+          {/* Navigation Items */}
+          {user && (
+            <nav style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }} className="d-none d-lg-flex">
+              <NavLink to={getDashboardLink()} className={({ isActive }) => `nav-pill-item ${isActive ? 'active' : ''}`}>
+                <Activity size={16} /> Dashboard
+              </NavLink>
 
-          <div className="collapse navbar-collapse" id="navbarContent">
+              <NavLink to="/appointments" className={({ isActive }) => `nav-pill-item ${isActive ? 'active' : ''}`}>
+                <Calendar size={16} /> Appointments
+              </NavLink>
+
+              <NavLink to="/tokens" className={({ isActive }) => `nav-pill-item ${isActive ? 'active' : ''}`}>
+                <Ticket size={16} /> OPD Queue
+              </NavLink>
+
+              <NavLink to="/labs" className={({ isActive }) => `nav-pill-item ${isActive ? 'active' : ''}`}>
+                <TestTube size={16} /> Lab
+              </NavLink>
+
+              <NavLink to="/pharmacy" className={({ isActive }) => `nav-pill-item ${isActive ? 'active' : ''}`}>
+                <Pill size={16} /> Pharmacy
+              </NavLink>
+
+              <NavLink to="/history" className={({ isActive }) => `nav-pill-item ${isActive ? 'active' : ''}`}>
+                <FileText size={16} /> Medical Records
+              </NavLink>
+
+              <NavLink to="/billing" className={({ isActive }) => `nav-pill-item ${isActive ? 'active' : ''}`}>
+                <CreditCard size={16} /> Billing
+              </NavLink>
+            </nav>
+          )}
+
+          {/* Right Action Controls */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
             {user ? (
               <>
-                <ul className="navbar-nav me-auto mb-2 mb-lg-0 gap-1">
-                  <li className="nav-item">
-                    <Link className="nav-link" to={getDashboardLink()}>
-                      <i className="bi bi-speedometer2 me-1"></i> Dashboard
-                    </Link>
-                  </li>
+                {/* Command Search Trigger Button */}
+                <button
+                  onClick={() => setShowSearchModal(true)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                    padding: '0.45rem 0.85rem', borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-color)', background: 'var(--bg-subtle)',
+                    color: 'var(--text-muted)', fontSize: '0.85rem', cursor: 'pointer'
+                  }}>
+                  <Search size={15} color="var(--brand-primary)" />
+                  <span className="d-none d-md-inline">Search platform...</span>
+                  <span style={{
+                    fontSize: '0.7rem', padding: '0.1rem 0.35rem', borderRadius: '4px',
+                    background: 'var(--bg-card)', border: '1px solid var(--border-color)', fontWeight: 700
+                  }}>Ctrl K</span>
+                </button>
 
-                  {(user.role === 'ADMIN' || user.is_superuser) && (
-                    <>
-                      <li className="nav-item">
-                        <Link className="nav-link" to="/doctors">
-                          <i className="bi bi-person-badge me-1"></i> Doctors & Shifts
-                        </Link>
-                      </li>
-                      <li className="nav-item">
-                        <Link className="nav-link" to="/patients">
-                          <i className="bi bi-people me-1"></i> Patients
-                        </Link>
-                      </li>
-                      <li className="nav-item">
-                        <Link className="nav-link" to="/beds">
-                          <i className="bi bi-door-open me-1"></i> Bed Matrix
-                        </Link>
-                      </li>
-                      <li className="nav-item">
-                        <Link className="nav-link" to="/billing">
-                          <i className="bi bi-receipt me-1"></i> Billing & Claims
-                        </Link>
-                      </li>
-                    </>
-                  )}
+                {/* Notifications Bell */}
+                <button
+                  onClick={() => setShowNotifDrawer(true)}
+                  style={{
+                    width: '38px', height: '38px', borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-color)', background: 'var(--bg-card)',
+                    color: 'var(--text-primary)', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', cursor: 'pointer', position: 'relative'
+                  }}
+                  title="Notification Center">
+                  <Bell size={18} />
+                  <span style={{ position: 'absolute', top: 6, right: 6, width: 8, height: 8, borderRadius: '50%', background: '#EF4444' }}></span>
+                </button>
 
-                  {user.role === 'DOCTOR' && (
-                    <>
-                      <li className="nav-item">
-                        <Link className="nav-link" to="/appointments">
-                          <i className="bi bi-calendar-event me-1"></i> Patient Checking
-                        </Link>
-                      </li>
-                      <li className="nav-item">
-                        <Link className="nav-link" to="/tokens">
-                          <i className="bi bi-card-list me-1"></i> OPD Queue Tokens
-                        </Link>
-                      </li>
-                      <li className="nav-item">
-                        <Link className="nav-link" to="/beds">
-                          <i className="bi bi-door-open me-1"></i> Bed Occupancy
-                        </Link>
-                      </li>
-                    </>
-                  )}
+                {/* Dark / Light Mode Toggle */}
+                <button
+                  onClick={toggleTheme}
+                  style={{
+                    width: '38px', height: '38px', borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-color)', background: 'var(--bg-card)',
+                    color: 'var(--text-primary)', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', cursor: 'pointer'
+                  }}
+                  title="Toggle Light/Dark Theme">
+                  {theme === 'dark' ? <Sun size={18} color="#F59E0B" /> : <Moon size={18} color="#2563EB" />}
+                </button>
 
-                  {user.role === 'PATIENT' && (
-                    <>
-                      <li className="nav-item">
-                        <Link className="nav-link" to="/appointments">
-                          <i className="bi bi-calendar-check me-1"></i> Appointments
-                        </Link>
-                      </li>
-                      <li className="nav-item">
-                        <Link className="nav-link" to="/tokens">
-                          <i className="bi bi-ticket-perforated me-1"></i> Walk-in Token
-                        </Link>
-                      </li>
-                      <li className="nav-item">
-                        <Link className="nav-link" to="/history">
-                          <i className="bi bi-journal-medical me-1"></i> Medical Info & History
-                        </Link>
-                      </li>
-                      <li className="nav-item">
-                        <Link className="nav-link" to="/billing">
-                          <i className="bi bi-receipt me-1"></i> Bills & Claims
-                        </Link>
-                      </li>
-                    </>
-                  )}
-                </ul>
-
-                {/* Global Search Bar */}
-                <form className="d-flex me-3 mb-2 mb-lg-0" onSubmit={handleSearch}>
-                  <div className="input-group input-group-sm">
-                    <input
-                      className="form-control form-control-sm"
-                      type="search"
-                      placeholder="Search patient, doctor, diagnosis..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                    <button className="btn btn-outline-secondary" type="submit">
-                      <i className="bi bi-search"></i>
-                    </button>
-                  </div>
-                </form>
-
-                <div className="d-flex align-items-center gap-2">
-                  <span className="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 fw-bold">
-                    <i className="bi bi-person-fill me-1"></i> {user.role}
-                  </span>
-                  <button onClick={toggleTheme} className="theme-toggle-btn" title="Toggle Light/Dark Theme">
-                    {theme === 'dark' ? (
-                      <i className="bi bi-sun-fill text-warning"></i>
-                    ) : (
-                      <i className="bi bi-moon-stars-fill text-primary"></i>
-                    )}
-                  </button>
-                  <button onClick={logout} className="btn btn-sm btn-outline-danger">
-                    <i className="bi bi-box-arrow-right me-1"></i> Logout
-                  </button>
+                {/* User Profile Tag */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '0.5rem',
+                  padding: '0.35rem 0.75rem', borderRadius: 'var(--radius-full)',
+                  background: 'var(--status-info-bg)', color: 'var(--brand-primary)',
+                  fontWeight: 600, fontSize: '0.82rem'
+                }}>
+                  <UserIcon size={14} />
+                  <span className="d-none d-sm-inline">{user.first_name || user.username} ({user.role})</span>
                 </div>
+
+                {/* Logout Button */}
+                <button
+                  onClick={logout}
+                  style={{
+                    width: '38px', height: '38px', borderRadius: 'var(--radius-md)',
+                    border: '1px solid rgba(239, 68, 68, 0.2)', background: 'var(--status-danger-bg)',
+                    color: 'var(--brand-danger)', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', cursor: 'pointer'
+                  }}
+                  title="Logout">
+                  <LogOut size={16} />
+                </button>
               </>
             ) : (
-              <ul className="navbar-nav ms-auto gap-2 align-items-center">
-                <li className="nav-item me-2">
-                  <button onClick={toggleTheme} className="theme-toggle-btn" title="Toggle Light/Dark Theme">
-                    {theme === 'dark' ? (
-                      <i className="bi bi-sun-fill text-warning"></i>
-                    ) : (
-                      <i className="bi bi-moon-stars-fill text-primary"></i>
-                    )}
-                  </button>
-                </li>
-                <li className="nav-item">
-                  <Link className="btn btn-sm btn-outline-custom" to="/login">Portal Login</Link>
-                </li>
-                <li className="nav-item">
-                  <Link className="btn btn-sm btn-primary-custom" to="/register">Register Account</Link>
-                </li>
-              </ul>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <button onClick={toggleTheme} style={{ width: '38px', height: '38px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', background: 'var(--bg-card)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  {theme === 'dark' ? <Sun size={18} color="#F59E0B" /> : <Moon size={18} color="#2563EB" />}
+                </button>
+                <Link to="/login" className="btn-nextgen-secondary">Portal Login</Link>
+                <Link to="/register" className="btn-nextgen-primary">Register Account</Link>
+              </div>
             )}
           </div>
         </div>
-      </nav>
+      </header>
+
+      {/* Global Modals & Drawers */}
+      <CommandSearchModal isOpen={showSearchModal} onClose={() => setShowSearchModal(false)} />
+      <NotificationDrawer isOpen={showNotifDrawer} onClose={() => setShowNotifDrawer(false)} />
+      <MobileBottomNav />
     </>
   );
 };
 
 export default Navbar;
+

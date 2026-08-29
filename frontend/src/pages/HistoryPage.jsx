@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import API from '../api';
+import { FileText, Stethoscope, Pill, Eye, Printer, Calendar, ShieldCheck, ChevronDown, ChevronUp } from 'lucide-react';
 
 const HistoryPage = () => {
   const [history, setHistory] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedRx, setSelectedRx] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
     fetchMedicalData();
@@ -26,189 +28,137 @@ const HistoryPage = () => {
     }
   };
 
-  if (loading) return <div className="text-center py-5"><div className="spinner-border text-primary"></div></div>;
+  if (loading) return <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>Loading Electronic Health Records...</div>;
 
   return (
-    <div className="container py-4">
+    <div style={{ maxWidth: '1200px', margin: '2rem auto', padding: '0 1.25rem' }}>
+      
       {/* Title */}
-      <div className="d-flex flex-wrap align-items-center justify-content-between mb-4 gap-3">
-        <div>
-          <h2 className="fw-bold text-primary mb-1">
-            <i className="bi bi-journal-medical me-2"></i> NextGen Medical Information & Digital Health Records
-          </h2>
-          <p className="text-secondary mb-0">Electronic Medical History, Diagnostics & Doctor Prescriptions</p>
-        </div>
+      <div style={{ marginBottom: '2rem' }}>
+        <h1 className="page-title">Electronic Health Records (EHR)</h1>
+        <p className="page-subtitle">Complete medical history, diagnostic timeline, and digital doctor prescriptions</p>
       </div>
 
-      {/* Patient Health Summary Quick Bar */}
-      <div className="row g-3 mb-4">
-        <div className="col-6 col-md-3">
-          <div className="glass-card p-3 border-primary text-center">
-            <div className="display-6 fw-bold text-primary mb-1">{history.length}</div>
-            <div className="small font-semibold text-secondary"><i className="bi bi-calendar-event me-1"></i> Total Consultations</div>
-          </div>
+      {/* Verified Digital Prescriptions Section */}
+      <div style={{ marginBottom: '2.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+          <h3 className="section-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Pill color="var(--brand-success)" size={20} /> Verified Doctor Prescriptions
+          </h3>
+          <span className="badge-nextgen badge-success">● Verified Rx</span>
         </div>
 
-        <div className="col-6 col-md-3">
-          <div className="glass-card p-3 border-success text-center">
-            <div className="display-6 fw-bold text-success mb-1">{prescriptions.length}</div>
-            <div className="small font-semibold text-secondary"><i className="bi bi-capsule me-1"></i> Active Prescriptions</div>
-          </div>
-        </div>
-
-        <div className="col-6 col-md-3">
-          <div className="glass-card p-3 border-info text-center">
-            <div className="fw-bold text-info mb-1" style={{ fontSize: '1.2rem' }}>
-              {history[0]?.diagnosis || 'No Record'}
-            </div>
-            <div className="small font-semibold text-secondary"><i className="bi bi-activity me-1"></i> Last Diagnosis</div>
-          </div>
-        </div>
-
-        <div className="col-6 col-md-3">
-          <div className="glass-card p-3 border-warning text-center">
-            <div className="fw-bold text-warning mb-1" style={{ fontSize: '1.2rem' }}>
-              {history[0]?.visit_date || 'N/A'}
-            </div>
-            <div className="small font-semibold text-secondary"><i className="bi bi-clock-history me-1"></i> Last Visit Date</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Electronic Prescriptions Section */}
-      <div className="glass-card p-4 mb-4 border-success">
-        <div className="d-flex align-items-center justify-content-between mb-3">
-          <h4 className="fw-bold text-success mb-0">
-            <i className="bi bi-file-earmark-medical-fill me-2"></i> Digital Doctor Prescriptions
-          </h4>
-          <span className="badge bg-success-subtle text-success border border-success-subtle px-3 py-1">Verified NextGen Rx</span>
-        </div>
-
-        <div className="row g-3">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
           {prescriptions.map(rx => (
-            <div key={rx.id} className="col-md-6">
-              <div className="glass-card p-3 border-success h-100 d-flex flex-column justify-content-between">
+            <div key={rx.id} className="nextgen-card" style={{ borderLeft: '4px solid var(--brand-success)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
                 <div>
-                  <div className="d-flex justify-content-between align-items-start mb-2">
-                    <strong className="text-primary fs-5">{rx.doctor_name}</strong>
-                    <span className="small text-muted">{rx.created_at?.slice(0, 10)}</span>
-                  </div>
-                  <div className="badge bg-primary-subtle text-primary border border-primary-subtle mb-2">
-                    Diagnosis: {rx.diagnosis}
-                  </div>
-                  <p className="small text-secondary mb-2 whitespace-pre-line">
-                    <strong className="d-block text-dark mb-1">Medicines Prescribed:</strong>
-                    {rx.medicines}
-                  </p>
-                  {rx.notes && <p className="small text-muted mb-0"><em>Notes: {rx.notes}</em></p>}
+                  <h4 style={{ margin: '0 0 0.2rem 0', fontSize: '1.1rem', fontWeight: 700 }}>{rx.doctor_name}</h4>
+                  <div style={{ fontSize: '0.82rem', color: 'var(--brand-primary)', fontWeight: 600 }}>{rx.doctor_specialization || 'Attending Specialist'}</div>
                 </div>
-
-                <button className="btn btn-sm btn-outline-success mt-3 w-100" onClick={() => setSelectedRx(rx)}>
-                  <i className="bi bi-eye-fill me-1"></i> View & Print Prescription
-                </button>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{rx.created_at?.slice(0, 10)}</span>
               </div>
+
+              <div style={{ background: 'var(--status-info-bg)', color: 'var(--brand-primary)', padding: '0.4rem 0.75rem', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.75rem' }}>
+                Diagnosis: {rx.diagnosis}
+              </div>
+
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem', whiteSpace: 'pre-line' }}>
+                <strong style={{ color: 'var(--text-primary)' }}>Medicines:</strong> <br />
+                {rx.medicines}
+              </div>
+
+              <button onClick={() => setSelectedRx(rx)} className="btn-nextgen-secondary" style={{ width: '100%', justifyContent: 'center', color: 'var(--brand-success)' }}>
+                <Eye size={16} /> View & Print Digital Slip
+              </button>
             </div>
           ))}
-
           {prescriptions.length === 0 && (
-            <div className="col-12 text-center text-muted py-4">
-              <i className="bi bi-capsule fs-2 d-block mb-2 text-secondary"></i>
-              No electronic prescriptions on record yet.
+            <div className="empty-state-box" style={{ gridColumn: '1 / -1' }}>
+              <div className="empty-state-icon">💊</div>
+              <p>No digital prescriptions recorded yet.</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Consultation & Visit Timeline */}
-      <div className="glass-card p-4">
-        <h4 className="fw-bold text-primary mb-3">
-          <i className="bi bi-list-stars me-2"></i> Medical Consultation & History Timeline
-        </h4>
-        <div className="table-responsive">
-          <table className="table table-custom align-middle mb-0">
-            <thead>
-              <tr>
-                <th>Visit Date</th>
-                <th>Attending Doctor</th>
-                <th>Diagnosis Record</th>
-                <th>Doctor Summary & Clinical Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-              {history.map(rec => (
-                <tr key={rec.id}>
-                  <td className="fw-bold text-primary">{rec.visit_date}</td>
-                  <td className="fw-semibold">{rec.doctor_name || 'General OPD'}</td>
-                  <td>
-                    <span className="badge bg-primary-subtle text-primary border border-primary-subtle fw-bold">
-                      {rec.diagnosis}
-                    </span>
-                  </td>
-                  <td className="small text-secondary">{rec.summary_notes}</td>
-                </tr>
-              ))}
-              {history.length === 0 && (
-                <tr><td colSpan="4" className="text-center text-muted py-4">No medical history visits recorded.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Expandable Medical Visit Timeline */}
+      <div className="nextgen-card">
+        <h3 className="section-title" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <FileText color="var(--brand-primary)" size={20} /> Complete Medical Consultation Timeline
+        </h3>
 
-      {/* Prescription View Modal */}
-      {selectedRx && (
-        <div className="modal show d-block" tabIndex="-1" style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)' }}>
-          <div className="modal-dialog modal-lg modal-dialog-centered">
-            <div className="modal-content glass-card border-success p-4">
-              <div className="modal-header border-bottom pb-3">
-                <div className="d-flex align-items-center gap-3">
-                  <div className="bg-success text-white p-2 rounded-3">
-                    <i className="bi bi-file-earmark-medical fs-3"></i>
-                  </div>
+        <div className="timeline-container">
+          {history.map(rec => (
+            <div key={rec.id} className="timeline-item">
+              <div className="nextgen-card" style={{ padding: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => setExpandedId(expandedId === rec.id ? null : rec.id)}>
                   <div>
-                    <h4 className="fw-bold text-success mb-0">NextGen HealthCare Hospital</h4>
-                    <small className="text-muted">Digital Medical Prescription Slip</small>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--brand-primary)', textTransform: 'uppercase' }}>
+                      {rec.visit_date} • {rec.doctor_name || 'General Consultation'}
+                    </div>
+                    <h4 style={{ margin: '0.25rem 0 0 0', fontSize: '1.1rem', fontWeight: 700 }}>Diagnosis: {rec.diagnosis}</h4>
                   </div>
-                </div>
-                <button type="button" className="btn-close" onClick={() => setSelectedRx(null)}></button>
-              </div>
-              <div className="modal-body py-4">
-                <div className="row g-3 mb-4">
-                  <div className="col-md-6">
-                    <p className="mb-1 text-muted small">PATIENT NAME</p>
-                    <h5 className="fw-bold text-primary mb-0">{selectedRx.patient_name}</h5>
-                  </div>
-                  <div className="col-md-6 text-md-end">
-                    <p className="mb-1 text-muted small">ATTENDING DOCTOR</p>
-                    <h5 className="fw-bold text-success mb-0">{selectedRx.doctor_name}</h5>
-                    <small className="text-muted">{selectedRx.doctor_specialization}</small>
-                  </div>
+                  <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                    {expandedId === rec.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                  </button>
                 </div>
 
-                <div className="glass-card p-3 mb-3 border-primary bg-primary-subtle">
-                  <strong className="text-primary d-block mb-1">DIAGNOSIS:</strong>
-                  <div className="fs-5 fw-bold text-dark">{selectedRx.diagnosis}</div>
-                </div>
-
-                <div className="glass-card p-3 mb-3 border-success">
-                  <strong className="text-success d-block mb-2"><i className="bi bi-capsule me-1"></i> MEDICINES & DOSAGE INSTRUCTIONS:</strong>
-                  <pre className="bg-white p-3 rounded border text-dark font-mono mb-0" style={{ whiteSpace: 'pre-wrap' }}>
-                    {selectedRx.medicines}
-                  </pre>
-                </div>
-
-                {selectedRx.notes && (
-                  <div className="small text-secondary">
-                    <strong>Doctor Instructions:</strong> {selectedRx.notes}
+                {expandedId === rec.id && (
+                  <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                    <p style={{ margin: '0 0 0.5rem 0' }}><strong>Clinical Summary Notes:</strong> {rec.summary_notes}</p>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Hospital Center: NextGen HealthCare Super Speciality • Gandhipuram, Coimbatore</div>
                   </div>
                 )}
               </div>
-              <div className="modal-footer border-top pt-3">
-                <button className="btn btn-outline-custom" onClick={() => setSelectedRx(null)}>Close</button>
-                <button className="btn btn-success" onClick={() => window.print()}>
-                  <i className="bi bi-printer-fill me-2"></i> Print Official Rx Slip
-                </button>
+            </div>
+          ))}
+          {history.length === 0 && (
+            <div className="empty-state-box">
+              <p>No past medical consultation history logged.</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Digital Prescription Print Modal */}
+      {selectedRx && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '1rem' }}>
+          <div className="nextgen-card" style={{ width: '100%', maxWidth: '600px', padding: '2rem' }}>
+            <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--brand-primary)', fontWeight: 800 }}>NextGen HealthCare Hospital</h3>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Verified Electronic Prescription Slip</div>
               </div>
+              <span className="badge-nextgen badge-success">Rx Verified</span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>PATIENT</div>
+                <div style={{ fontWeight: 700, fontSize: '1rem' }}>{selectedRx.patient_name}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>DOCTOR</div>
+                <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--brand-primary)' }}>{selectedRx.doctor_name}</div>
+              </div>
+            </div>
+
+            <div style={{ background: 'var(--status-info-bg)', padding: '0.85rem', borderRadius: '8px', marginBottom: '1rem' }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--brand-primary)' }}>DIAGNOSIS</div>
+              <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text-primary)' }}>{selectedRx.diagnosis}</div>
+            </div>
+
+            <div style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border-color)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--brand-success)', marginBottom: '0.5rem' }}>MEDICINES & DOSAGE</div>
+              <pre style={{ margin: 0, fontFamily: 'inherit', fontSize: '0.9rem', color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>{selectedRx.medicines}</pre>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+              <button onClick={() => setSelectedRx(null)} className="btn-nextgen-secondary">Close</button>
+              <button onClick={() => window.print()} className="btn-nextgen-primary" style={{ background: 'var(--brand-success)' }}>
+                <Printer size={16} /> Print Prescription
+              </button>
             </div>
           </div>
         </div>
@@ -218,3 +168,4 @@ const HistoryPage = () => {
 };
 
 export default HistoryPage;
+

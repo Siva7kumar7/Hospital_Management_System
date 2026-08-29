@@ -8,7 +8,13 @@ const DoctorDashboard = () => {
   const [appointments, setAppointments] = useState([]);
   const [tokens, setTokens] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
+  const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // AI Summary Drawer State
+  const [selectedPatientId, setSelectedPatientId] = useState('');
+  const [aiSummary, setAiSummary] = useState(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
 
   useEffect(() => {
     fetchDoctorData();
@@ -16,18 +22,34 @@ const DoctorDashboard = () => {
 
   const fetchDoctorData = async () => {
     try {
-      const [appRes, tokenRes, rxRes] = await Promise.all([
+      const [appRes, tokenRes, rxRes, patRes] = await Promise.all([
         API.get('appointments/'),
         API.get('tokens/'),
-        API.get('prescriptions/')
+        API.get('prescriptions/'),
+        API.get('patients/')
       ]);
       setAppointments(appRes.data);
       setTokens(tokenRes.data.filter(t => t.status === 'WAITING' || t.status === 'IN_CONSULTATION'));
       setPrescriptions(rxRes.data.slice(0, 5));
+      setPatients(patRes.data);
     } catch (err) {
       console.error("Failed to load doctor dashboard:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGenerateSummary = async () => {
+    if (!selectedPatientId) return;
+    setSummaryLoading(true);
+    setAiSummary(null);
+    try {
+      const res = await API.post('ai/clinical-summary/', { patient_id: selectedPatientId });
+      setAiSummary(res.data.summary);
+    } catch (err) {
+      alert("Failed to generate AI clinical summary.");
+    } finally {
+      setSummaryLoading(false);
     }
   };
 
@@ -57,18 +79,58 @@ const DoctorDashboard = () => {
           <h2 className="fw-bold text-primary mb-1">
             <i className="bi bi-stethoscope me-2"></i> Welcome, Dr. {user?.first_name} {user?.last_name}
           </h2>
-          <p className="text-secondary mb-0">Doctor Operations & Consultations</p>
+          <p className="text-secondary mb-0">Doctor Workspace & Clinical Intelligence Center</p>
         </div>
-        <Link to="/tokens" className="btn btn-primary-custom">
-          <i className="bi bi-card-list me-1"></i> Open Live Token Queue Board
-        </Link>
+        <div className="d-flex gap-2">
+          <Link to="/labs" className="btn btn-outline-primary">
+            🧪 Diagnostics & Labs
+          </Link>
+          <Link to="/tokens" className="btn btn-primary-custom">
+            <i className="bi bi-card-list me-1"></i> OPD Queue Board
+          </Link>
+        </div>
+      </div>
+
+      {/* AI Clinical Summarizer Bar */}
+      <div className="glass-card p-3 mb-4 bg-light border border-primary-subtle">
+        <div className="row align-items-center">
+          <div className="col-md-5">
+            <h6 className="fw-bold text-primary mb-1">🤖 AI Clinical EMR Summarizer</h6>
+            <small className="text-muted">Select patient to synthesize diagnoses, labs, & vitals automatically</small>
+          </div>
+          <div className="col-md-4">
+            <select
+              className="form-select form-select-sm"
+              value={selectedPatientId}
+              onChange={(e) => setSelectedPatientId(e.target.value)}>
+              <option value="">-- Select Patient --</option>
+              {patients.map(p => (
+                <option key={p.id} value={p.id}>{p.user?.first_name} {p.user?.last_name} ({p.patient_id || p.user?.username})</option>
+              ))}
+            </select>
+          </div>
+          <div className="col-md-3 text-end">
+            <button
+              onClick={handleGenerateSummary}
+              disabled={!selectedPatientId || summaryLoading}
+              className="btn btn-sm btn-primary-custom w-100">
+              {summaryLoading ? 'Generating...' : '✨ Generate AI Summary'}
+            </button>
+          </div>
+        </div>
+
+        {aiSummary && (
+          <div className="mt-3 p-3 bg-white rounded border text-dark" style={{ whiteSpace: 'pre-wrap', fontSize: '0.9rem' }}>
+            {aiSummary}
+          </div>
+        )}
       </div>
 
       <div className="row g-4">
         {/* Today's Appointments */}
         <div className="col-lg-7">
           <div className="glass-card p-4 h-100">
-            <h5 className="fw-bold text-primary mb-3"><i class="bi bi-calendar-event me-2"></i> Assigned Appointments</h5>
+            <h5 className="fw-bold text-primary mb-3"><i className="bi bi-calendar-event me-2"></i> Assigned Appointments</h5>
             <div className="table-responsive">
               <table className="table table-custom align-middle mb-0">
                 <thead>
@@ -160,3 +222,4 @@ const DoctorDashboard = () => {
 };
 
 export default DoctorDashboard;
+

@@ -24,7 +24,13 @@ import SearchResultsPage from './pages/SearchResultsPage';
 import PrescriptionFormPage from './pages/PrescriptionFormPage';
 import HistoryPage from './pages/HistoryPage';
 
+import LabManagementPage from './pages/LabManagementPage';
+import PharmacyInventoryPage from './pages/PharmacyInventoryPage';
+import NurseDashboard from './pages/NurseDashboard';
+import AuditLogsPage from './pages/AuditLogsPage';
+
 import QuickAccessHub from './components/QuickAccessHub';
+import AIHealthAssistantWidget from './components/AIHealthAssistantWidget';
 
 function App() {
   return (
@@ -79,9 +85,18 @@ function App() {
                 </ProtectedRoute>
               } />
               <Route path="/history" element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
+              <Route path="/labs" element={<ProtectedRoute><LabManagementPage /></ProtectedRoute>} />
+              <Route path="/pharmacy" element={<ProtectedRoute><PharmacyInventoryPage /></ProtectedRoute>} />
+              <Route path="/nurse" element={<ProtectedRoute><NurseDashboard /></ProtectedRoute>} />
+              <Route path="/audit-logs" element={
+                <ProtectedRoute allowedRoles={['ADMIN']}>
+                  <AuditLogsPage />
+                </ProtectedRoute>
+              } />
             </Routes>
           </main>
           <QuickAccessHub />
+          <AIHealthAssistantWidget />
           <Footer />
         </Router>
       </AuthProvider>
@@ -90,3 +105,5 @@ function App() {
 }
 
 export default App;
+
+

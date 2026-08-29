@@ -9,12 +9,17 @@ from datetime import date
 
 from .models import (
     User, Patient, Doctor, Appointment, Token, Bed,
-    Prescription, PatientHistory, Bill, InsuranceClaim, Ambulance
+    Prescription, PatientHistory, Bill, InsuranceClaim, Ambulance,
+    LabTest, LabOrder, LabReport, Medicine, PharmacyDispense,
+    PatientVitals, EmergencyTriage, AuditLog, Notification
 )
 from .serializers import (
     UserSerializer, PatientSerializer, DoctorSerializer, AppointmentSerializer,
     TokenSerializer, BedSerializer, PrescriptionSerializer, PatientHistorySerializer,
-    BillSerializer, InsuranceClaimSerializer, AmbulanceSerializer
+    BillSerializer, InsuranceClaimSerializer, AmbulanceSerializer,
+    LabTestSerializer, LabOrderSerializer, LabReportSerializer, MedicineSerializer,
+    PharmacyDispenseSerializer, PatientVitalsSerializer, EmergencyTriageSerializer,
+    AuditLogSerializer, NotificationSerializer
 )
 from .permissions import IsAdminRole, IsDoctorRole, IsPatientRole, IsAdminOrDoctor
 
@@ -552,4 +557,254 @@ class AmbulanceViewSet(viewsets.ModelViewSet):
             ambulance.save()
             return Response({'message': f"Ambulance {ambulance.vehicle_number} dispatched to {pickup_location}!", 'ambulance': AmbulanceSerializer(ambulance).data})
         return Response({'error': 'Ambulance is not available.'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+# --- ENTERPRISE MODULE VIEWSETS ---
+
+class LabTestViewSet(viewsets.ModelViewSet):
+    queryset = LabTest.objects.all()
+    serializer_class = LabTestSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+
+class LabOrderViewSet(viewsets.ModelViewSet):
+    serializer_class = LabOrderSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_patient:
+            return LabOrder.objects.filter(patient__user=user)
+        return LabOrder.objects.all()
+
+    @action(detail=True, methods=['post'])
+    def submit_report(self, request, pk=None):
+        order = self.get_object()
+        result_value = request.data.get('result_value', 'Normal')
+        is_abnormal = request.data.get('is_abnormal', False)
+        notes = request.data.get('technician_notes', 'Test completed cleanly.')
+
+        report, created = LabReport.objects.update_or_create(
+            lab_order=order,
+            defaults={
+                'result_value': result_value,
+                'is_abnormal': is_abnormal,
+                'technician_notes': notes
+            }
+        )
+        order.status = LabOrder.Status.COMPLETED
+        order.save()
+
+        # Record audit log
+        AuditLog.objects.create(
+            user=request.user if request.user.is_authenticated else None,
+            action="LAB_REPORT_SUBMITTED",
+            details=f"Report submitted for Order #{order.id} ({order.test.name})"
+        )
+
+        return Response({
+            'message': 'Lab report submitted successfully!',
+            'order': LabOrderSerializer(order).data
+        })
+
+
+class MedicineViewSet(viewsets.ModelViewSet):
+    queryset = Medicine.objects.all()
+    serializer_class = MedicineSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    @action(detail=False, methods=['get'])
+    def low_stock(self, request):
+        low_stock_meds = Medicine.objects.filter(stock_quantity__lte=models.F('reorder_level'))
+        return Response(MedicineSerializer(low_stock_meds, many=True).data)
+
+
+class PharmacyDispenseViewSet(viewsets.ModelViewSet):
+    serializer_class = PharmacyDispenseSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_patient:
+            return PharmacyDispense.objects.filter(patient__user=user)
+        return PharmacyDispense.objects.all()
+
+    def create(self, request, *args, **kwargs):
+        data = request.data
+        patient_id = data.get('patient')
+        medicine_id = data.get('medicine')
+        quantity = int(data.get('quantity', 1))
+
+        try:
+            medicine = Medicine.objects.get(pk=medicine_id)
+            patient = Patient.objects.get(pk=patient_id)
+
+            if medicine.stock_quantity < quantity:
+                return Response({'error': f'Insufficient stock for {medicine.name}. Only {medicine.stock_quantity} remaining.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            medicine.stock_quantity -= quantity
+            medicine.save()
+
+            dispense = PharmacyDispense.objects.create(
+                patient=patient,
+                medicine=medicine,
+                quantity=quantity,
+                prescription_id=data.get('prescription')
+            )
+
+            AuditLog.objects.create(
+                user=request.user,
+                action="MEDICINE_DISPENSED",
+                details=f"Dispensed {quantity} x {medicine.name} to {patient.user.username}"
+            )
+
+            return Response(PharmacyDispenseSerializer(dispense).data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PatientVitalsViewSet(viewsets.ModelViewSet):
+    serializer_class = PatientVitalsSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        patient_id = self.request.query_params.get('patient_id')
+        if user.is_patient:
+            return PatientVitals.objects.filter(patient__user=user)
+        elif patient_id:
+            return PatientVitals.objects.filter(patient_id=patient_id)
+        return PatientVitals.objects.all()
+
+    def perform_create(self, serializer):
+        serializer.save(recorded_by=self.request.user)
+
+
+class EmergencyTriageViewSet(viewsets.ModelViewSet):
+    queryset = EmergencyTriage.objects.all()
+    serializer_class = EmergencyTriageSerializer
+
+    def get_permissions(self):
+        return [permissions.AllowAny()]
+
+
+class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = AuditLog.objects.all()
+    serializer_class = AuditLogSerializer
+    permission_classes = [IsAdminRole]
+
+
+class NotificationViewSet(viewsets.ModelViewSet):
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Notification.objects.filter(user=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def mark_read(self, request, pk=None):
+        notif = self.get_object()
+        notif.is_read = True
+        notif.save()
+        return Response({'status': 'marked_read'})
+
+
+# --- CLINICAL AI INTELLIGENCE ENDPOINTS ---
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def api_ai_symptom_assistant(request):
+    symptoms = request.data.get('symptoms', '').lower()
+    if not symptoms:
+        return Response({'error': 'Symptoms description is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Smart clinical triage evaluation
+    triage_level = "NORMAL"
+    badge = "🟢 Normal"
+    department = "General Medicine"
+    doctor_spec = "General Physician"
+    summary = "Symptoms suggest a non-urgent general evaluation."
+
+    if any(term in symptoms for term in ['chest pain', 'heart', 'shortness of breath', 'arm pain', 'palpitation', 'cardiac']):
+        triage_level = "CRITICAL"
+        badge = "🔴 Critical"
+        department = "Cardiology"
+        doctor_spec = "Cardiology"
+        summary = "⚠️ Potential cardiovascular concern detected. Emergency triage recommended."
+
+    elif any(term in symptoms for term in ['stroke', 'numbness', 'seizure', 'paralysis', 'migraine', 'headache', 'dizziness']):
+        triage_level = "HIGH"
+        badge = "🟠 High"
+        department = "Neurology"
+        doctor_spec = "Neurology"
+        summary = "Neurological evaluation recommended based on described symptoms."
+
+    elif any(term in symptoms for term in ['fracture', 'bone', 'joint pain', 'sprain', 'knee', 'back pain', 'trauma']):
+        triage_level = "MODERATE"
+        badge = "🟡 Moderate"
+        department = "Orthopedics"
+        doctor_spec = "Orthopedics"
+        summary = "Orthopedic evaluation advised for musculoskeletal discomfort."
+
+    elif any(term in symptoms for term in ['stomach', 'vomiting', 'diarrhea', 'acid', 'gastric', 'abdomen']):
+        triage_level = "MODERATE"
+        badge = "🟡 Moderate"
+        department = "Gastroenterology"
+        doctor_spec = "General Medicine"
+        summary = "Gastrointestinal consultation suggested."
+
+    return Response({
+        'symptoms_analyzed': symptoms,
+        'triage_level': triage_level,
+        'badge': badge,
+        'department': department,
+        'recommended_specialization': doctor_spec,
+        'clinical_guidance': summary,
+        'action_prompt': f"Book an appointment with {doctor_spec} department.",
+        'disclaimer': "⚠️ Note: This AI Symptom Assistant is a decision-support tool and does not replace a professional medical diagnosis."
+    })
+
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def api_ai_clinical_summary(request):
+    patient_id = request.data.get('patient_id')
+    if not patient_id:
+        return Response({'error': 'patient_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        patient = Patient.objects.get(pk=patient_id)
+        history = patient.medical_history.all()[:5]
+        vitals = patient.vitals.first()
+        prescriptions = patient.prescriptions.all()[:3]
+        lab_orders = patient.lab_orders.filter(status=LabOrder.Status.COMPLETED)[:3]
+
+        recent_diagnoses = [h.diagnosis for h in history] if history else ['No past record']
+        rx_list = [p.medicines for p in prescriptions] if prescriptions else ['No active prescriptions']
+        lab_results = [f"{l.test.name}: {getattr(l, 'report', 'Pending')}" for l in lab_orders] if lab_orders else ['No recent lab reports']
+
+        summary_text = (
+            f"### Clinical Summary for {patient.user.get_full_name()} ({patient.patient_id})\n"
+            f"**Age/Gender**: {patient.dob or 'N/A'} | {patient.gender} | **Blood Group**: {patient.blood_group}\n"
+            f"**Allergies**: {patient.allergies}\n"
+            f"**Existing Conditions**: {patient.existing_conditions}\n"
+            f"**Latest Vitals**: Temp: {vitals.temperature if vitals else 'N/A'}, BP: {vitals.blood_pressure if vitals else 'N/A'}, SPO2: {vitals.oxygen_saturation if vitals else 'N/A'}%\n\n"
+            f"**Recent Diagnoses**: {', '.join(recent_diagnoses)}\n"
+            f"**Active Medications**: {', '.join(rx_list)}\n"
+            f"**Recent Diagnostic Labs**: {', '.join(lab_results)}"
+        )
+
+        AuditLog.objects.create(
+            user=request.user,
+            action="AI_CLINICAL_SUMMARY_GENERATED",
+            details=f"Generated clinical summary for Patient ID #{patient_id}"
+        )
+
+        return Response({
+            'patient_id': patient_id,
+            'summary': summary_text
+        })
+    except Patient.DoesNotExist:
+        return Response({'error': 'Patient not found.'}, status=status.HTTP_404_NOT_FOUND)
+
 
